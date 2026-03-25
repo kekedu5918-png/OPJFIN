@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="theme-color" content="#060910">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800;12..96,900&family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>OPJ Elite v51 — Préparation Officier de Police Judiciaire</title>
+
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+
+<!-- ═══ ONBOARDING ═══ -->
+<div id="onboarding" style="position:fixed;inset:0;background:var(--bg-0);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;overflow:hidden">
+
+  <!-- Fond animé -->
+  <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden">
+    <div style="position:absolute;top:-120px;left:-80px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.18) 0%,transparent 70%);filter:blur(40px)"></div>
+    <div style="position:absolute;bottom:-100px;right:-60px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.12) 0%,transparent 70%);filter:blur(40px)"></div>
+  </div>
+
+  <!-- Carte centrale -->
+  <div style="position:relative;width:100%;max-width:420px;padding:0 20px;z-index:1">
+    <div style="background:var(--bg-1);border:1px solid var(--brd-l);border-radius:var(--r-3xl);padding:36px 28px 28px;box-shadow:0 24px 80px rgba(0,0,0,.6)">
+
+      <!-- Logo + badge -->
+      <div style="text-align:center;margin-bottom:28px">
+        <div class="splash-logo-wrap">
+          <div class="splash-logo-ring">
+            <span class="splash-logo-em">⚖️</span>
+          </div>
+        </div>
+        <h1 style="font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:900;color:var(--t1);letter-spacing:-.04em;margin-bottom:6px">OPJ <span style="color:var(--accent-l)">Elite</span></h1>
+        <p style="color:var(--t2);font-size:13px;line-height:1.5">La préparation structurée pour réussir l'examen<br><span style="color:var(--gold);font-weight:700">Officier de Police Judiciaire</span></p>
+      </div>
+
+      <!-- Badges stats -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:24px">
+        <div style="background:var(--bg-2);border:1px solid var(--brd);border-radius:var(--r-m);padding:10px 6px;text-align:center">
+          <div style="font-size:18px;font-weight:800;font-family:'DM Mono',monospace;color:var(--accent-xl)">500+</div>
+          <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">Questions</div>
+        </div>
+        <div style="background:var(--bg-2);border:1px solid var(--brd);border-radius:var(--r-m);padding:10px 6px;text-align:center">
+          <div style="font-size:18px;font-weight:800;font-family:'DM Mono',monospace;color:var(--gold)">38</div>
+          <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">Fiches proc.</div>
+        </div>
+        <div style="background:var(--bg-2);border:1px solid var(--brd);border-radius:var(--r-m);padding:10px 6px;text-align:center">
+          <div style="font-size:18px;font-weight:800;font-family:'DM Mono',monospace;color:var(--ok)">☁️</div>
+          <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">Cloud Sync</div>
+        </div>
+      </div>
+
+      <!-- AUTH TABS -->
+      <div id="auth-tabs" style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn btn-ghost" id="tab-login" onclick="showAuthTab('login')" style="flex:1;background:var(--accent);color:#fff">Connexion</button>
+        <button class="btn btn-ghost" id="tab-signup" onclick="showAuthTab('signup')" style="flex:1">Inscription</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <div id="auth-login">
+        <div class="inp-g w-full" style="margin-bottom:12px">
+          <label class="inp-lbl">Email</label>
+          <input class="inp" id="login-email" type="email" placeholder="votre@email.com" autocomplete="email">
+        </div>
+        <div class="inp-g w-full" style="margin-bottom:16px">
+          <label class="inp-lbl">Mot de passe</label>
+          <input class="inp" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button class="btn btn-p" id="btn-login" onclick="handleLogin()" style="width:100%;font-size:15px;font-weight:800">
+          Se connecter →
+        </button>
+        <button class="btn btn-ghost" onclick="handleMagicLink()" style="width:100%;margin-top:8px;font-size:12px">
+          🔗 Recevoir un lien de connexion
+        </button>
+      </div>
+
+      <!-- SIGNUP FORM -->
+      <div id="auth-signup" style="display:none">
+        <div class="inp-g w-full" style="margin-bottom:12px">
+          <label class="inp-lbl">Votre prénom</label>
+          <input class="inp" id="signup-name" type="text" placeholder="Ex : Jean" maxlength="32" autocomplete="given-name">
+        </div>
+        <div class="inp-g w-full" style="margin-bottom:12px">
+          <label class="inp-lbl">Email</label>
+          <input class="inp" id="signup-email" type="email" placeholder="votre@email.com" autocomplete="email">
+        </div>
+        <div class="inp-g w-full" style="margin-bottom:12px">
+          <label class="inp-lbl">Mot de passe (min. 6 caractères)</label>
+          <input class="inp" id="signup-password" type="password" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div class="inp-g w-full" style="margin-bottom:16px">
+          <label class="inp-lbl">Date de votre examen</label>
+          <input class="inp" id="signup-date" type="month" value="2026-06">
+        </div>
+        <button class="btn btn-p" id="btn-signup" onclick="handleSignup()" style="width:100%;font-size:15px;font-weight:800">
+          Créer mon compte →
+        </button>
+      </div>
+
+      <!-- Séparateur -->
+      <div style="display:flex;align-items:center;gap:12px;margin:16px 0">
+        <div style="flex:1;height:1px;background:var(--brd)"></div>
+        <span style="font-size:11px;color:var(--t3)">ou</span>
+        <div style="flex:1;height:1px;background:var(--brd)"></div>
+      </div>
+
+      <!-- Mode hors-ligne -->
+      <button class="btn btn-ghost" onclick="startOfflineMode()" style="width:100%;font-size:13px">
+        📴 Continuer sans compte (données locales)
+      </button>
+
+      <p style="text-align:center;font-size:10px;color:var(--t3);margin-top:14px;line-height:1.6">
+        v51 · Sync cloud sécurisé · Progression multi-appareils
+      </p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ APP ═══ -->
+<div id="app" style="display:none">
+  <header class="app-hdr" id="app-hdr">
+    <div class="hdr-logo">OPJ <span>Elite</span></div>
+    <span class="hdr-badge">v51</span>
+    <span class="hdr-xp font-mono" id="hdr-xp">0 XP</span>
+  </header>
+
+  <!-- ═══ PAGE: ACCUEIL ═══ -->
+  <div class="page" id="p-home" style="display:none">
+    <!-- Search bar -->
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-inp" id="global-search" type="text" placeholder="🔍 Leçons, QCM, procédures…" autocomplete="off" oninput="GS.onInput(this.value)" onfocus="GS.show()" onblur="setTimeout(()=>GS.hide(),200)" aria-label="Recherche globale">
+      <button class="search-clear" id="search-clear-btn" onclick="GS.clear()" aria-label="Effacer">✕</button>
+      <div class="search-results" id="search-results" style="display:none"></div>
+    </div>
+
+    <div class="hero">
+      <div class="hero-greeting" id="h-greeting">Bonjour</div>
+      <div class="hero-name font-title" id="h-name">OPJ Elite</div>
+      <div class="hero-kpis">
+        <div class="hero-kpi kpi-xp"><div class="hero-kv" id="h-xp">0</div><div class="hero-kl">XP</div></div>
+        <div class="hero-kpi kpi-streak"><div class="hero-kv" id="h-streak">0<span class="streak-flame">🔥</span></div><div class="hero-kl">Streak</div></div>
+        <div class="hero-kpi"><div class="hero-kv" id="h-score">—</div><div class="hero-kl">Précision</div></div>
+        <div class="hero-kpi kpi-due"><div class="hero-kv" id="h-due">0</div><div class="hero-kl">À réviser</div></div>
+      </div>
+      <div class="xp-bar mb16"><div class="xp-fill" id="h-xpbar" style="width:0%"></div></div>
+      <div class="hero-btns">
+        <button class="hero-btn-p" onclick="goLesson()">📚 Apprendre</button>
+        <button class="hero-btn-s" onclick="startSmartSession()">⚡ Réviser</button>
+      </div>
+    </div>
+
+    <!-- Défi du jour -->
+    <div role="banner" id="h-motiv-banner" style="display:flex;align-items:flex-start;gap:10px;padding:14px 16px;background:var(--bg-1);border:1px solid var(--brd);border-radius:18px;margin-bottom:10px;"></div>
+<div id="h-qdj" style="margin-bottom:10px"></div>
+<div id="h-defi-widget"></div>
+
+    <!-- Zones faibles -->
+    <div id="h-weak-widget"></div>
+
+    <!-- Stats rapides -->
+    <div class="stats-grid">
+      <div class="stat-card"><div style="font-size:20px;margin-bottom:4px">📚</div><div class="stat-val" id="h-lessons-done">0</div><div class="stat-lbl" style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">Leçons vues</div></div>
+      <div class="stat-card"><div style="font-size:20px;margin-bottom:4px">🎯</div><div class="stat-val" id="h-qcm-done">0</div><div class="stat-lbl" style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">QCM réalisés</div></div>
+    </div>
+
+    <!-- Progression par chapitre -->
+    <div class="sect-label">Progression</div>
+    <div class="card" style="padding:12px"><div id="h-chapter-progress"></div></div>
+
+    <!-- Compte à rebours examen -->
+    <div class="exam-countdown" id="h-exam-countdown" style="display:none;flex-direction:column;align-items:center">
+      <div class="exam-countdown-days" id="h-exam-days">—</div>
+      <div class="exam-countdown-lbl">jours avant l'examen OPJ</div>
+    </div>
+
+    <!-- PRO teaser -->
+    <div id="h-pro-teaser" class="card card-gold card-hover" onclick="navigateTo('pro')" style="display:flex;align-items:center;gap:14px;cursor:pointer">
+      <div style="font-size:28px;flex-shrink:0">👑</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:900;color:var(--gold);letter-spacing:-.01em">OPJ Elite PRO</div>
+        <div style="font-size:11px;color:var(--t2);margin-top:2px">Accès complet · 0,83€/jour</div>
+      </div>
+      <div style="font-size:18px;color:var(--t3)">›</div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: LEÇONS ═══ -->
+  <div class="page" id="p-lecons" style="display:none">
+    <div class="flex-b mb16">
+      <div>
+        <div class="font-title text-2xl fw-900">Mes Leçons</div>
+        <div class="text-sm text-secondary mt8" id="lec-global-prog">0 leçon vue</div>
+      </div>
+      <div style="text-align:right">
+        <div class="font-mono text-2xl fw-700 text-gold" id="lec-pct">0%</div>
+        <div class="text-xs text-muted">Progression</div>
+      </div>
+    </div>
+    <div class="xp-bar mb20"><div class="xp-fill" id="lec-xpbar" style="width:0%"></div></div>
+    <div id="chapters-list"></div>
+  </div>
+
+  <!-- ═══ PAGE: RÉVISION ═══ -->
+  <div class="page" id="p-revision" style="display:none">
+    <!-- QCM session active -->
+    <div id="qcm-session" style="display:none">
+      <div class="flex-b mb12">
+        <button class="btn btn-ghost btn-sm" onclick="exitQCM()">✕ Quitter</button>
+        <div class="text-sm text-secondary fw-700" id="qcm-prog-txt">1/10</div>
+        <div class="font-mono text-md text-accent" id="qcm-timer"></div>
+      </div>
+      <div class="qcm-wrap" id="qcm-body"></div>
+      <div class="sticky-next" id="qcm-next-wrap" style="display:none">
+        <button class="btn btn-p" id="qcm-next-btn" onclick="nextQuestion()">Question suivante →</button>
+      </div>
+    </div>
+    <!-- Résultats -->
+    <div id="qcm-results" style="display:none">
+      <button class="btn btn-ghost btn-sm mb16" onclick="backToRevision()">← Retour</button>
+      <div class="send-wrap">
+        <div id="qr-emoji" style="font-size:52px">🏆</div>
+        <div class="send-title">Session terminée !</div>
+        <div class="send-score" id="qr-pct" style="color:var(--accent-l)">0%</div>
+        <div class="send-lbl" id="qr-detail">0/0 bonnes réponses</div>
+      </div>
+      <div class="stats-grid mb16">
+        <div class="stat-card"><div class="stat-val text-ok" id="qr-ok">0</div><div class="stat-lbl">Correctes</div></div>
+        <div class="stat-card"><div class="stat-val text-err" id="qr-ko">0</div><div class="stat-lbl">Incorrectes</div></div>
+      </div>
+      <div id="qr-review" style="margin-bottom:16px"></div>
+      <button class="btn btn-p mb8" onclick="startSmartSession()">🔄 Nouvelle session</button>
+      <button class="btn btn-ghost btn-full" onclick="backToRevision()">← Menu révision</button>
+    </div>
+    <!-- Menu révision -->
+    <div id="rev-menu">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-inp" id="rev-search" type="text" placeholder="Rechercher…" autocomplete="off" oninput="GS.onInput(this.value)" onfocus="GS.show()" onblur="setTimeout(()=>GS.hide(),200)" aria-label="Recherche">
+        <div class="search-results" id="search-results-rev" style="display:none"></div>
+      </div>
+      <div class="rev-tabs">
+        <button class="rev-tab active" id="rtab-qcm" onclick="setRevTab('qcm')">🎯 QCM</button>
+        <button class="rev-tab" id="rtab-fiches" onclick="setRevTab('fiches')">⚖️ Fiches</button>
+        <button class="rev-tab" id="rtab-proc" onclick="setRevTab('proc')">📋 Procédure</button>
+        <button class="rev-tab" id="rtab-libertes" onclick="setRevTab('libertes')">🏛️ Libertés</button>
+        <button class="rev-tab" id="rtab-blitz" onclick="setRevTab('blitz')">⚡ Blitz</button>
+        <button class="rev-tab" id="rtab-classer" onclick="setRevTab('classer')">🗂️ Classer</button>
+        <button class="rev-tab" id="rtab-imprimer" onclick="setRevTab('imprimer')">🖨️ Imprimer</button>
+        <button class="rev-tab" id="rtab-annales" onclick="setRevTab('annales')">📝 Annales</button>
+      </div>
+      <!-- QCM tab -->
+      <div id="rtab-qcm-content">
+        <!-- QCM Hero -->
+        <div class="qcm-hero">
+          <div class="qcm-hero-top">
+            <div>
+              <div class="qcm-hero-title">⚡ Session FSRS</div>
+              <div class="qcm-hero-sub" id="rev-due-count">Chargement…</div>
+            </div>
+            <button class="qcm-hero-btn" onclick="startSmartSession()">Lancer →</button>
+          </div>
+          <div class="qcm-hero-stats">
+            <div class="qcm-stat"><div class="qcm-stat-v" id="qs-due">—</div><div class="qcm-stat-l">À réviser</div></div>
+            <div class="qcm-stat-div"></div>
+            <div class="qcm-stat"><div class="qcm-stat-v" id="qs-total">—</div><div class="qcm-stat-l">Total</div></div>
+            <div class="qcm-stat-div"></div>
+            <div class="qcm-stat"><div class="qcm-stat-v" id="qs-acc">—</div><div class="qcm-stat-l">Précision</div></div>
+          </div>
+        </div>
+        <!-- Thèmes -->
+        <div class="qcm-themes-hd">
+          <span>Par thème</span>
+          <span id="qcm-themes-count" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--t3)"></span>
+        </div>
+        <div id="theme-list"></div>
+      </div>
+      <!-- Fiches LAME -->
+      <div id="rtab-fiches-content" style="display:none">
+        <div class="fiches-hero">
+          <div class="fiches-hero-top">
+            <div>
+              <div class="fiches-hero-title">🗂️ Fiches Infractions</div>
+              <div class="fiches-hero-sub" id="fiches-summary">0/0 maîtrisées</div>
+            </div>
+            <div class="fiches-legend">
+              <span class="fiches-leg-item"><span class="fiches-leg-dot" style="background:var(--gold)"></span>Maîtrisée</span>
+              <span class="fiches-leg-item"><span class="fiches-leg-dot" style="background:var(--accent-l)"></span>En cours</span>
+              <span class="fiches-leg-item"><span class="fiches-leg-dot" style="background:var(--bg-4)"></span>Non vue</span>
+            </div>
+          </div>
+          <div class="fiches-hero-bar-wrap">
+            <div class="fiches-hero-prog"><div id="fiches-prog-bar" class="fiches-hero-prog-fill" style="width:0%"></div></div>
+          </div>
+          <div class="fiches-hero-search">
+            <span class="fiches-search-icon">🔍</span>
+            <input type="text" placeholder="Filtrer les infractions…" id="fiches-search"
+              oninput="renderBubbles()"
+              onfocus="this.parentElement.classList.add('focused')"
+              onblur="this.parentElement.classList.remove('focused')"
+              aria-label="Filtrer les fiches" autocomplete="off">
+          </div>
+        </div>
+        <div class="bubble-grid" id="bubble-grid"></div>
+      </div>
+      <!-- Procédure tab -->
+      <div id="rtab-proc-content" style="display:none">
+        <div id="proc-list-rev"></div>
+      </div>
+      <!-- Libertés tab -->
+      <div id="rtab-libertes-content" style="display:none">
+        <div id="lp-list"></div>
+      </div>
+      <!-- Blitz tab -->
+      <div id="rtab-blitz-content" style="display:none">
+        <div class="mode-hero blitz-hero">
+          <div class="mode-hero-icon">⚡</div>
+          <div class="mode-hero-title">Blitz Vrai / Faux</div>
+          <div class="mode-hero-sub">Valide ou invalide 10 pièges classiques d'examen en 60 secondes chrono</div>
+          <div class="blitz-infos">
+            <div class="blitz-info-item"><span>🎯</span><span>10 assertions</span></div>
+            <div class="blitz-info-item"><span>⏱</span><span>60 secondes</span></div>
+            <div class="blitz-info-item"><span>⚡</span><span>+5 XP/bonne réponse</span></div>
+          </div>
+          <button class="btn btn-p mode-hero-btn" onclick="BLITZ.start()">⚡ Lancer le Blitz</button>
+          <div id="blitz-best-display" class="mode-best-score"></div>
+        </div>
+      </div>
+      <!-- Classer tab -->
+      <div id="rtab-classer-content" style="display:none">
+        <div class="mode-hero classer-hero">
+          <div class="mode-hero-icon">🗂️</div>
+          <div class="mode-hero-title">Classification</div>
+          <div class="mode-hero-sub">Place chaque infraction dans la bonne colonne : Crime · Délit · Contravention</div>
+          <div class="classer-cols-preview">
+            <div class="classer-col-prev" style="--cc:#ef4444">🔴 Crimes</div>
+            <div class="classer-col-prev" style="--cc:#f59e0b">🟡 Délits</div>
+            <div class="classer-col-prev" style="--cc:#10b981">🟢 Contraventions</div>
+          </div>
+          <div class="blitz-infos">
+            <div class="blitz-info-item"><span>📦</span><span>8 infractions</span></div>
+            <div class="blitz-info-item"><span>🏆</span><span>+3 XP/bonne réponse</span></div>
+            <div class="blitz-info-item"><span>🎓</span><span>Art. 111-1 CP</span></div>
+          </div>
+          <button class="btn btn-p mode-hero-btn" onclick="CLASSIF.start()">🗂️ Lancer la session</button>
+        </div>
+      </div>
+      <!-- Imprimer tab -->
+      <div id="rtab-imprimer-content" style="display:none">
+        <div class="tab-section-hero">
+          <div class="tsh-icon">📄</div>
+          <div>
+            <div class="tsh-title">Fiches de synthèse</div>
+            <div class="tsh-sub">Imprimables · Format A4 · Révision rapide</div>
+          </div>
+        </div>
+        <div id="print-list"></div>
+      </div>
+      <!-- Annales tab -->
+      <div id="rtab-annales-content" style="display:none">
+        <div class="tab-section-hero">
+          <div class="tsh-icon">📝</div>
+          <div>
+            <div class="tsh-title">Annales & Sujets types</div>
+            <div class="tsh-sub">Sujets corrigés · Méthode OPJ · Coefficient réel</div>
+          </div>
+        </div>
+        <div id="annales-list"></div>
+      </div>
+    </div>
+
+    <!-- Fiche overlay -->
+    <div id="fiche-ov" style="position:fixed;inset:0;display:none;align-items:flex-end;z-index:200;background:rgba(0,0,0,.65);backdrop-filter:blur(8px)">
+      <div style="width:100%;max-width:560px;margin:0 auto;max-height:90dvh;overflow-y:auto;background:var(--bg-1);border-radius:22px 22px 0 0;border-top:1px solid var(--brd-l)">
+        <div style="width:36px;height:4px;background:var(--bg-4);border-radius:2px;margin:11px auto 0;cursor:pointer" onclick="closeFiche()"></div>
+        <div id="fiche-body" style="padding:14px 17px calc(18px + env(safe-area-inset-bottom,0px))"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: EXAMEN ═══ -->
+  <div class="page" id="p-examen" style="display:none">
+    <div class="exam-hero">
+      <h3>🏆 Mode Examen</h3>
+      <p>Conditions réelles : chrono, pression, performance. Entraîne-toi jusqu'à l'excellence.</p>
+    </div>
+
+    <div class="sect-label">Sessions d'examen</div>
+    <div class="mode-card" onclick="startExamSession(40,60)">
+      <div class="mode-ico" style="background:rgba(239,68,68,.1)">🧠</div>
+      <div class="mode-inf">
+        <h4>QCM Intensif</h4>
+        <p>40 questions en 60 minutes — test complet toutes matières</p>
+        <div class="tags">
+          <span class="mode-tag" style="background:rgba(239,68,68,.12);color:var(--err)">40 QCM</span>
+          <span class="mode-tag" style="background:var(--warn-bg);color:var(--warn)">60 min</span>
+          <span class="mode-tag tag-accent">Chrono</span>
+        </div>
+      </div>
+    </div>
+    <div class="mode-card" onclick="startExamSession(20,30)">
+      <div class="mode-ico" style="background:var(--accent-glow)">⚡</div>
+      <div class="mode-inf">
+        <h4>Session Express</h4>
+        <p>20 questions en 30 minutes — révision quotidienne rapide</p>
+        <div class="tags">
+          <span class="mode-tag tag-accent">20 QCM</span>
+          <span class="mode-tag" style="background:var(--warn-bg);color:var(--warn)">30 min</span>
+        </div>
+      </div>
+    </div>
+    <div class="mode-card" onclick="startExamSession(10,0)">
+      <div class="mode-ico" style="background:var(--ok-bg)">🎯</div>
+      <div class="mode-inf">
+        <h4>Flash Session</h4>
+        <p>10 questions ciblées sur tes thèmes faibles — sans chrono</p>
+        <div class="tags">
+          <span class="mode-tag tag-ok">10 QCM</span>
+          <span class="mode-tag tag-ok">Sans chrono</span>
+        </div>
+      </div>
+    </div>
+    <div class="mode-card" onclick="EB.start()">
+      <div class="mode-ico" style="background:rgba(212,175,55,.1)">📋</div>
+      <div class="mode-inf">
+        <h4>Examen Blanc</h4>
+        <p>Simulation complète — dossier de faits + QCM + correction détaillée</p>
+        <div class="tags">
+          <span class="mode-tag tag-gold">Dossier</span>
+          <span class="mode-tag tag-gold">Correction</span>
+        </div>
+      </div>
+    </div>
+    <div class="mode-card" onclick="QUALIF.start()">
+      <div class="mode-ico" style="background:rgba(139,92,246,.1)">⚖️</div>
+      <div class="mode-inf">
+        <h4>Qualifie les Faits</h4>
+        <p>Scénario narratif → qualification juridique → article → peine</p>
+        <div class="tags">
+          <span class="mode-tag tag-violet">10 scénarios</span>
+          <span class="mode-tag tag-violet">Difficulté progressive</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sect-label">CR Téléphonique</div>
+    <div class="mode-card" onclick="startCRTimer()">
+      <div class="mode-ico" style="background:rgba(212,175,55,.1)">📞</div>
+      <div class="mode-inf">
+        <h4>Simulateur CR Parquet</h4>
+        <p>40 min préparation + 20 min oral. Timer automatique deux phases.</p>
+        <div class="tags">
+          <span class="mode-tag tag-gold">Épreuve orale</span>
+          <span class="mode-tag tag-accent">Timer</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CR Timer overlay -->
+    <div id="cr-timer-ov" style="position:fixed;inset:0;display:none;flex-direction:column;background:var(--bg-0);z-index:300">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px">
+        <div class="cr-phase-lbl mb16" id="cr-phase-lbl">📝 Préparation</div>
+        <div class="cr-timer-disp mb8" id="cr-timer-disp">40:00</div>
+        <div class="text-sm text-muted" id="cr-phase-sub">minutes restantes</div>
+        <div style="display:flex;gap:10px;margin-top:28px">
+          <button class="btn btn-ghost" style="min-width:110px" onclick="stopCRTimer()">Arrêter</button>
+          <button class="btn btn-p" style="min-width:110px" id="cr-skip-btn" onclick="skipCRPhase()">Phase oral →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARTOUCHES -->
+    <div class="divider" style="margin:20px 0 16px"></div>
+    <div class="sect-label">Cartouches procéduraux</div>
+    <div class="grid-2" style="margin-bottom:12px">
+      <div class="mode-card card-hover" onclick="C.start('gav')" style="padding:13px;flex-direction:column;align-items:center;text-align:center">
+        <div style="font-size:24px;margin-bottom:5px">🔒</div>
+        <div class="text-sm fw-700">Garde à Vue</div>
+        <div class="text-xs text-muted mt8 font-mono">Art. 63 CPP</div>
+      </div>
+      <div class="mode-card card-hover" onclick="C.start('perq')" style="padding:13px;flex-direction:column;align-items:center;text-align:center">
+        <div style="font-size:24px;margin-bottom:5px">🏠</div>
+        <div class="text-sm fw-700">Perquisition</div>
+        <div class="text-xs text-muted mt8 font-mono">Art. 56/76/94 CPP</div>
+      </div>
+      <div class="mode-card card-hover" onclick="C.start('aud')" style="padding:13px;flex-direction:column;align-items:center;text-align:center">
+        <div style="font-size:24px;margin-bottom:5px">🎙️</div>
+        <div class="text-sm fw-700">Audition Libre</div>
+        <div class="text-xs text-muted mt8 font-mono">Art. 61-1 CPP</div>
+      </div>
+      <div class="mode-card card-hover" onclick="C.start('cr')" style="padding:13px;flex-direction:column;align-items:center;text-align:center">
+        <div style="font-size:24px;margin-bottom:5px">📞</div>
+        <div class="text-sm fw-700">CR Parquet</div>
+        <div class="text-xs text-muted mt8 font-mono">Art. 40 CPP</div>
+      </div>
+    </div>
+
+    <!-- Cartouche form -->
+    <div id="cm" style="display:block"></div>
+    <div id="ca" style="display:none;margin-top:8px">
+      <button class="btn btn-ghost btn-sm mb16" onclick="C.back()">← Retour</button>
+      <div class="card card-accent mb8" id="ca-bg">
+        <div class="text-lg fw-800" id="ca-ti"></div>
+        <div class="text-sm text-secondary mt8" id="ca-st"></div>
+      </div>
+      <div id="ca-f"></div>
+      <button class="btn btn-p mt20" onclick="C.validate()">Valider la cartouche ✓</button>
+      <div id="ca-r" class="mt16" style="display:none"></div>
+    </div>
+    <!-- GAV timeline -->
+    <div id="ct" style="display:none;margin-top:8px">
+      <button class="btn btn-ghost btn-sm mb16" onclick="C.back()">← Retour</button>
+      <h3 class="font-title fw-800 text-xl mb16">Simulateur délais GAV</h3>
+      <div class="mb12">
+        <div class="inp-lbl">Heure d'appréhension</div>
+        <input type="datetime-local" class="inp" id="tl-start">
+      </div>
+      <div class="mb12">
+        <div class="inp-lbl">Régime</div>
+        <select class="inp" id="tl-reg">
+          <option value="dc">Droit commun (48h max)</option>
+          <option value="co">Criminalité organisée (96h max)</option>
+          <option value="terr">Terrorisme (144h max)</option>
+        </select>
+      </div>
+      <button class="btn btn-p btn-full mt16" onclick="C.genTL()">Générer la timeline</button>
+      <div id="tl-out" class="mt20"></div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: PROFIL ═══ -->
+  <div class="page" id="p-profil" style="display:none">
+    <!-- Hero profil -->
+    <div style="text-align:center;padding:20px 0 8px;position:relative">
+      <!-- Ring XP autour de l'avatar -->
+      <div style="position:relative;width:100px;height:100px;margin:0 auto 12px">
+        <svg width="100" height="100" viewBox="0 0 100 100" style="position:absolute;inset:0;transform:rotate(-90deg)">
+          <circle cx="50" cy="50" r="44" fill="none" stroke="var(--bg-3)" stroke-width="6"/>
+          <circle cx="50" cy="50" r="44" fill="none" stroke="url(#xpGrad)" stroke-width="6" stroke-linecap="round"
+            id="pr-xp-ring" stroke-dasharray="276.5" stroke-dashoffset="276.5"/>
+          <defs>
+            <linearGradient id="xpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#3b82f6"/>
+              <stop offset="100%" stop-color="#d4af37"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="profil-av" id="pr-av" style="width:84px;height:84px;font-size:42px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border-radius:50%;position:absolute;top:8px;left:8px;padding:0;margin:0;transform:none;left:0;top:0;width:100%;height:100%;border-radius:50%;font-size:44px">👮</div>
+      </div>
+      <div class="profil-name font-title" id="pr-name">OPJ</div>
+      <div class="profil-grade" id="pr-grade">Gardien de la Paix</div>
+      <!-- XP progress bar -->
+      <div style="padding:0 20px;margin-top:10px;margin-bottom:4px">
+        <div class="flex-b mb4">
+          <span style="font-size:11px;color:var(--t3);font-family:'DM Mono',monospace" id="pr-xp-lbl">0 XP</span>
+          <span style="font-size:11px;color:var(--accent-xl);font-family:'DM Mono',monospace;font-weight:700" id="pr-xp-pct">0%</span>
+        </div>
+        <div class="xp-bar"><div class="xp-fill" id="pr-xpbar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="profil-stats mb16">
+      <div class="profil-stat"><div class="ps-val" id="pr-streak">0🔥</div><div class="ps-lbl">Streak</div></div>
+      <div class="profil-stat"><div class="ps-val" id="pr-qcm">0</div><div class="ps-lbl">QCM faits</div></div>
+      <div class="profil-stat"><div class="ps-val" id="pr-acc">—</div><div class="ps-lbl">Précision</div></div>
+    </div>
+    <div class="pmenu">
+      <button class="pmenu-item" onclick="navigateTo('pro')"><span class="pmenu-icon">👑</span><span style="color:var(--gold);font-weight:700">OPJ Elite PRO</span><span class="pmenu-arrow">›</span></button>
+      <button class="pmenu-item" onclick="showGrades()"><span class="pmenu-icon">🏅</span><span>Tableau des grades</span><span class="pmenu-arrow">›</span></button>
+      <button class="pmenu-item" onclick="THEME28.toggle()"><span class="pmenu-icon">🌙</span><span id="theme-label">Mode clair</span><span class="pmenu-arrow">›</span></button>
+      <button class="pmenu-item" onclick="showAccountModal()"><span class="pmenu-icon">👤</span><span>Mon compte</span><span class="pmenu-arrow">›</span></button>
+      <button class="pmenu-item" onclick="resetData()"><span class="pmenu-icon">🔄</span><span class="text-secondary">Réinitialiser la progression</span><span class="pmenu-arrow">›</span></button>
+      <button class="pmenu-item" id="btn-logout" onclick="AUTH.logout()" style="display:none"><span class="pmenu-icon">🚪</span><span style="color:var(--err)">Se déconnecter</span><span class="pmenu-arrow">›</span></button>
+      <div class="pmenu-item" style="cursor:default"><span class="pmenu-icon">ℹ️</span><span class="text-muted">OPJ Elite v51.0 — <span id="sync-status">Local</span></span></div>
+    </div>
+    <!-- Activité -->
+    <div class="sect-label">Activité 30 jours</div>
+    <div class="activity-chart mb12">
+      <div class="activity-bars" id="pr-activity-bars"></div>
+    </div>
+    <!-- Radar -->
+    <div class="sect-label">Performance par domaine</div>
+    <div class="stats-radar-wrap mb12"><div id="pr-radar"></div></div>
+    <!-- Badges -->
+    <div class="sect-label">Mes badges</div>
+    <div class="badges-grid" id="pr-badges-grid"></div>
+  </div>
+
+  <!-- ═══ PAGE: PRO ═══ -->
+  <div class="page" id="p-pro" style="display:none">
+    <button class="btn btn-ghost btn-sm mb16" onclick="navigateTo('home')">← Retour</button>
+    <div style="text-align:center;padding:16px 0">
+      <div style="font-size:40px;margin-bottom:10px">👑</div>
+      <div class="font-title text-3xl fw-900 text-gold">OPJ Elite PRO</div>
+      <div class="text-sm text-secondary mt8 mb20" style="line-height:1.6">Accès complet pour réussir l'examen OPJ</div>
+    </div>
+    <div class="pro-urgency">⏳ Examen en juin 2026 — Prépare-toi maintenant.</div>
+    <div class="pro-price-card">
+      <div class="pro-price">149 €</div>
+      <div class="text-sm text-secondary">pour 6 mois d'accès complet</div>
+      <div class="text-xs text-muted mt8">soit <strong style="color:var(--gold)">0,83€ / jour</strong></div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="pro-feat"><div class="pro-feat-ico">📚</div><span>Toutes les leçons structurées — 13 chapitres complets</span></div>
+      <div class="pro-feat"><div class="pro-feat-ico">🎯</div><span>120+ QCM avec explications légales détaillées</span></div>
+      <div class="pro-feat"><div class="pro-feat-ico">⚖️</div><span>Fiches LAME complètes — 25+ infractions</span></div>
+      <div class="pro-feat"><div class="pro-feat-ico">📞</div><span>Simulateur CR téléphonique chronométré</span></div>
+      <div class="pro-feat"><div class="pro-feat-ico">🏆</div><span>Examen blanc + Qualifie les Faits</span></div>
+      <div class="pro-feat"><div class="pro-feat-ico">📊</div><span>Statistiques avancées + FSRS adaptatif</span></div>
+    </div>
+    <button class="btn btn-gold" onclick="STRIPE.createCheckout('6m')">👑 S'abonner — 149€ / 6 mois</button>
+    <p class="text-xs text-muted mt12" style="text-align:center">Paiement sécurisé · Remboursement 14 jours</p>
+  </div>
+
+  <!-- ═══ LESSON MODAL ═══ -->
+  <div class="lesson-ov" id="lesson-ov" onclick="if(event.target===this)closeLesson()">
+    <div class="lesson-sheet">
+      <div class="sheet-handle" onclick="closeLesson()"></div>
+      <div class="lesson-content" id="lesson-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ═══ BLITZ OVERLAY ═══ -->
+  <div class="blitz-ov" id="blitz-ov">
+    <div class="blitz-header">
+      <button class="btn btn-ghost btn-sm" onclick="BLITZ.stop()" aria-label="Quitter">✕</button>
+      <div class="blitz-timer-bar"><div class="blitz-timer-fill" id="blitz-timer-fill" style="width:100%"></div></div>
+      <div class="font-mono text-md text-accent fw-700" id="blitz-timer-display">60</div>
+    </div>
+    <div class="blitz-body">
+      <div class="text-xs text-muted font-mono mb8" id="blitz-counter" style="text-transform:uppercase;letter-spacing:.1em">1/10</div>
+      <div class="blitz-q" id="blitz-question">Chargement…</div>
+      <div class="blitz-btns">
+        <button class="blitz-btn blitz-btn-ko" id="blitz-faux" onclick="BLITZ.answer(false)" aria-label="Faux">✗ FAUX</button>
+        <button class="blitz-btn blitz-btn-ok" id="blitz-vrai" onclick="BLITZ.answer(true)" aria-label="Vrai">✓ VRAI</button>
+      </div>
+    </div>
+  </div>
+  <div class="blitz-results-ov" id="blitz-results-ov">
+    <div style="text-align:center;max-width:400px;width:100%">
+      <div style="font-size:52px;margin-bottom:10px" id="blitz-res-emoji">🏆</div>
+      <div class="font-title text-2xl fw-900 mb8">Blitz terminé !</div>
+      <div class="font-mono text-3xl fw-700 text-accent mb8" id="blitz-res-score">0/10</div>
+      <div class="text-sm text-secondary mb16" id="blitz-res-xp">+0 XP</div>
+      <div id="blitz-review" style="text-align:left;max-height:280px;overflow-y:auto;margin-bottom:16px"></div>
+      <button class="btn btn-p mb8" style="max-width:300px;width:100%" onclick="BLITZ.start()">🔄 Recommencer</button>
+      <button class="btn btn-ghost btn-full" style="max-width:300px" onclick="BLITZ.backToMenu()">← Menu révision</button>
+    </div>
+  </div>
+
+  <!-- ═══ CLASSIFY OVERLAY ═══ -->
+  <div class="classify-ov" id="classify-ov">
+    <div style="display:flex;align-items:center;gap:11px;padding:13px 15px;border-bottom:1px solid var(--brd)">
+      <button class="btn btn-ghost btn-sm" onclick="CLASSIF.stop()" aria-label="Quitter">✕ Quitter</button>
+      <div class="text-md fw-800 flex-1">🗂️ Classification des infractions</div>
+      <button class="btn btn-p btn-sm" onclick="CLASSIF.validate()" id="classif-validate-btn" style="display:none">✓ Valider</button>
+    </div>
+    <div style="padding:11px">
+      <div class="text-sm text-secondary mb12" style="text-align:center">Glisse chaque infraction dans la bonne colonne</div>
+      <div id="classif-items" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;padding:8px;background:var(--bg-1);border-radius:var(--r-m);border:1px dashed var(--brd-l);min-height:38px"></div>
+      <div class="classify-cols">
+        <div class="classify-col" id="col-Crime" ondragover="CLASSIF.dragOver(event,'Crime')" ondrop="CLASSIF.drop(event,'Crime')" ondragleave="CLASSIF.dragLeave(event)">
+          <div class="classify-col-lbl" style="background:var(--err-bg);color:var(--err)">🔴 CRIME</div>
+        </div>
+        <div class="classify-col" id="col-Dlit" ondragover="CLASSIF.dragOver(event,'Dlit')" ondrop="CLASSIF.drop(event,'Dlit')" ondragleave="CLASSIF.dragLeave(event)">
+          <div class="classify-col-lbl" style="background:var(--warn-bg);color:var(--warn)">🟠 DÉLIT</div>
+        </div>
+        <div class="classify-col" id="col-Contravention" ondragover="CLASSIF.dragOver(event,'Contravention')" ondrop="CLASSIF.drop(event,'Contravention')" ondragleave="CLASSIF.dragLeave(event)">
+          <div class="classify-col-lbl" style="background:var(--accent-glow);color:var(--accent-l)">🟡 CONTRAV.</div>
+        </div>
+      </div>
+    </div>
+    <div id="classif-result" style="display:none;padding:16px;text-align:center">
+      <div style="font-size:36px" id="classif-res-emoji">🏆</div>
+      <div class="font-title text-xl fw-900 mt8 mb12" id="classif-res-score"></div>
+      <button class="btn btn-p mb8" onclick="CLASSIF.start()">Rejouer</button>
+      <button class="btn btn-ghost btn-full" onclick="CLASSIF.stop()">← Retour</button>
+    </div>
+  </div>
+
+  <!-- ═══ EXAMEN BLANC OVERLAY ═══ -->
+  <div class="eb-ov" id="eb-ov">
+    <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--brd)">
+      <button class="btn btn-ghost btn-sm" onclick="EB.stop()" aria-label="Quitter">✕ Arrêter</button>
+      <div class="font-title fw-800 flex-1" id="eb-title">Examen Blanc</div>
+      <div class="eb-timer" id="eb-timer">60:00</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px;max-width:560px;margin:0 auto;width:100%">
+      <div id="eb-body"></div>
+    </div>
+  </div>
+
+  <!-- ═══ QUALIF LES FAITS OVERLAY ═══ -->
+  <div class="qualif-ov" id="qualif-ov">
+    <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--brd)">
+      <button class="btn btn-ghost btn-sm" onclick="QUALIF.stop()" aria-label="Quitter">✕ Quitter</button>
+      <div class="font-title fw-800 flex-1">⚖️ Qualifie les Faits</div>
+      <div class="text-xs text-muted font-mono" id="qualif-counter">1/10</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px;max-width:560px;margin:0 auto;width:100%">
+      <div id="qualif-body"></div>
+    </div>
+  </div>
+
+  <!-- ═══ BADGE UNLOCK OVERLAY ═══ -->
+  <div class="badge-unlock-ov" id="badge-unlock-ov">
+    <div class="badge-unlock-inner">
+      <div class="badge-unlock-em" id="bul-emoji">🏆</div>
+      <div class="text-xs text-accent font-mono fw-700 mb8" style="text-transform:uppercase;letter-spacing:.1em">🎉 Badge débloqué !</div>
+      <div class="badge-unlock-name" id="bul-name">Nom du badge</div>
+      <div class="badge-unlock-desc" id="bul-desc">Description</div>
+      <button class="btn btn-gold" style="min-width:200px" onclick="BADGES.closeModal()">✓ Super !</button>
+    </div>
+  </div>
+
+  <!-- ═══ STREAK DANGER OVERLAY ═══ -->
+  <div id="streak-danger-ov" style="position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:400;display:none;align-items:center;justify-content:center;padding:24px">
+    <div style="background:var(--bg-1);border:1px solid rgba(239,68,68,.3);border-radius:var(--r-2xl);padding:28px;max-width:340px;width:100%;text-align:center">
+      <div style="font-size:52px;margin-bottom:11px" class="streak-flame">🔥</div>
+      <div class="font-title text-xl fw-900 text-err mb8">Ton streak est en danger !</div>
+      <div class="text-sm text-secondary mb12" style="line-height:1.6">Tu n'as pas ouvert l'app depuis plus de 20h. Fais tes 5 questions pour maintenir ton streak !</div>
+      <div id="streak-shield-info" class="mb14"></div>
+      <button class="btn btn-p btn-full mb8" onclick="SHIELD.dismiss();startFlashSession()">🎯 Mes 5 questions du jour</button>
+      <button class="btn btn-ghost btn-full mb8" onclick="SHIELD.useShield()" id="use-shield-btn" style="display:none">🛡️ Utiliser mon bouclier</button>
+      <button class="btn btn-ghost btn-full" onclick="SHIELD.dismiss()" style="color:var(--t3)">Ignorer</button>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL FICHE PROCÉDURE (PFM) ═══ -->
+  <div id="pf-ov" class="pf-ov" style="display:none;align-items:flex-end;z-index:200;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);position:fixed;inset:0">
+    <div style="width:100%;max-width:560px;margin:0 auto;max-height:90dvh;overflow-y:auto;background:var(--bg-1);border-radius:22px 22px 0 0;border-top:1px solid var(--brd-l)">
+      <div style="width:36px;height:4px;background:var(--bg-4);border-radius:2px;margin:11px auto 0;cursor:pointer" onclick="PFM.close()"></div>
+      <div id="pf-body" style="padding:14px 17px calc(18px + env(safe-area-inset-bottom,0px))"></div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL ANNALE ═══ -->
+  <div id="ann-ov" style="position:fixed;inset:0;display:none;align-items:flex-end;z-index:200;background:rgba(0,0,0,.65);backdrop-filter:blur(8px)">
+    <div style="width:100%;max-width:560px;margin:0 auto;max-height:92dvh;overflow-y:auto;background:var(--bg-1);border-radius:22px 22px 0 0;border-top:1px solid var(--brd-l)">
+      <div style="width:36px;height:4px;background:var(--bg-4);border-radius:2px;margin:11px auto 0;cursor:pointer" onclick="closeAnnale()"></div>
+      <div id="ann-body" style="padding:14px 17px calc(18px + env(safe-area-inset-bottom,0px))"></div>
+    </div>
+  </div>
+
+  <!-- ═══ BOTTOM NAV ═══ -->
+  <nav class="bnav">
+    <button class="nav-btn active" id="nav-home" onclick="navigateTo('home')" aria-label="Accueil">
+      <span class="nav-icon"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/><path d="M3 12v9h6M15 21v-9h6V12"/></svg></span><span>ACCUEIL</span>
+    </button>
+    <button class="nav-btn" id="nav-lecons" onclick="navigateTo('lecons')" aria-label="Leçons">
+      <span class="nav-icon"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></span><span>LEÇONS</span>
+    </button>
+    <button class="nav-btn" id="nav-revision" onclick="navigateTo('revision')" aria-label="Révision">
+      <span class="nav-icon"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span><span>RÉVISION</span>
+    </button>
+    <button class="nav-btn" id="nav-examen" onclick="navigateTo('examen')" aria-label="Examen">
+      <span class="nav-icon"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span><span>EXAMEN</span>
+    </button>
+    <button class="nav-btn" id="nav-profil" onclick="navigateTo('profil')" aria-label="Profil">
+      <span class="nav-icon"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></span><span>PROFIL</span>
+    </button>
+  </nav>
+</div>
+
+<!-- CONFETTI -->
+<canvas id="confetti-cv" style="position:fixed;inset:0;pointer-events:none;z-index:600"></canvas>
+<!-- TOAST -->
+<div id="toast-ctr" role="status" aria-live="polite" aria-atomic="true" style="position:fixed;bottom:calc(var(--nav-h)+var(--safe-b)+16px);left:50%;transform:translateX(-50%);z-index:700;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none"></div>
+<!-- FAB -->
+<button id="fab" aria-label="Retour en haut" style="display:none;position:fixed;bottom:calc(var(--nav-h)+var(--safe-b)+70px);right:16px;width:42px;height:42px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:17px;cursor:pointer;box-shadow:var(--sh);z-index:90;transition:all var(--tr);align-items:center;justify-content:center">↑</button>
+
+<div id="offline-bar" role="status" aria-live="polite" style="display:none;position:fixed;top:0;left:0;right:0;background:var(--err);color:#fff;text-align:center;font-size:11px;font-weight:700;padding:5px;z-index:200;font-family:'DM Mono',monospace">📡 HORS LIGNE — Mode lecture seule</div>
+
+
+
+
+<!-- ══ OVERLAYS MANQUANTS — ajoutés v38 ══ -->
+
+<!-- lec-ov : overlay leçons & libertés -->
+<div class="lec-ov" id="lec-ov" onclick="if(event.target===this){LEC.close&&LEC.close();LP.close&&LP.close()}">
+  <div class="lesson-sheet">
+    <div class="sheet-handle" onclick="LEC.close&&LEC.close();LP.close&&LP.close()"></div>
+    <div id="lec-bd" class="lesson-content"></div>
+  </div>
+</div>
+
+<!-- eval-ov : évaluation orale -->
+<div class="eval-ov" id="eval-ov" onclick="if(event.target===this)EVAL.close()">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:900;color:var(--t1)">🎤 Évaluation orale</div>
+      <button onclick="EVAL.close()" style="background:var(--bg-3);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;color:var(--t2)">✕</button>
+    </div>
+    <div id="eval-list" style="margin-bottom:16px"></div>
+    <div id="eval-result" style="display:none;padding:14px;border-radius:var(--r-l);margin-bottom:16px;font-size:13px;font-weight:700;text-align:center"></div>
+    <button class="btn btn-p" onclick="EVAL.calc()" style="margin-bottom:8px">Calculer le score</button>
+    <button class="btn btn-ghost" onclick="EVAL.close()">Fermer</button>
+  </div>
+</div>
+
+<!-- pro-modal-ov : modal PRO -->
+<div class="pro-modal-ov" id="pro-modal-ov" onclick="if(event.target===this)P.hidePro()">
+  <div class="modal-box">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:40px;margin-bottom:8px">👑</div>
+      <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:900;color:var(--gold);letter-spacing:-.02em">OPJ Elite PRO</div>
+      <div style="font-size:13px;color:var(--t2);margin-top:6px;line-height:1.5">Accès complet pour réussir l'examen OPJ</div>
+    </div>
+    <div style="background:var(--bg-2);border-radius:var(--r-l);padding:16px;margin-bottom:16px">
+      <div style="font-size:11px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Ce que vous obtenez</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:13px;color:var(--t1)">✅ 500+ QCM avec explications détaillées</div>
+        <div style="font-size:13px;color:var(--t1)">✅ 38 fiches procédure complètes</div>
+        <div style="font-size:13px;color:var(--t1)">✅ Examens blancs chronométrés</div>
+        <div style="font-size:13px;color:var(--t1)">✅ Algorithme de répétition espacée</div>
+        <div style="font-size:13px;color:var(--t1)">✅ Fiches PDF imprimables</div>
+      </div>
+    </div>
+    <div style="background:linear-gradient(135deg,rgba(212,175,55,.15),rgba(212,175,55,.05));border:1px solid rgba(212,175,55,.3);border-radius:var(--r-l);padding:16px;text-align:center;margin-bottom:16px">
+      <div style="font-size:36px;font-weight:900;font-family:'Bricolage Grotesque',sans-serif;color:var(--gold)">149 €</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:2px">6 mois d'accès · soit 0,83€/jour</div>
+    </div>
+    <button class="btn btn-p" onclick="P.buy()" style="margin-bottom:8px;background:linear-gradient(135deg,var(--gold),#c9a227);color:#000">👑 Obtenir l'accès PRO</button>
+    <button class="btn btn-ghost" onclick="P.hidePro()">Plus tard</button>
+  </div>
+</div>
+
+<!-- pay-modal-ov : modal paiement -->
+<div class="pay-modal-ov" id="pay-modal-ov" onclick="if(event.target===this)P.hidePay()">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:900;color:var(--t1)">💳 Finaliser l'accès</div>
+      <button onclick="P.hidePay()" style="background:var(--bg-3);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;color:var(--t2)">✕</button>
+    </div>
+    <div class="pay-plan sel" id="pay-plan-6m" onclick="P.selectPlan('6m')">
+      <div class="pay-plan-price">149 € <span style="font-size:14px;color:var(--ok);font-weight:700">· Populaire</span></div>
+      <div class="pay-plan-label">6 mois d'accès complet</div>
+    </div>
+    <div class="pay-plan" id="pay-plan-2m" onclick="P.selectPlan('2m')">
+      <div class="pay-plan-price">59 €</div>
+      <div class="pay-plan-label">2 mois d'accès</div>
+    </div>
+    <div style="margin:16px 0">
+      <label style="font-size:11px;font-weight:700;color:var(--t2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Votre email</label>
+      <input class="inp" id="pay-email" type="email" placeholder="exemple@email.com" autocomplete="email">
+    </div>
+    <button class="btn btn-p" onclick="P.confirmPay()" style="margin-bottom:8px">✅ Confirmer l'accès PRO</button>
+    <button class="btn btn-ghost" onclick="P.hidePay()">Annuler</button>
+    <p style="text-align:center;font-size:10px;color:var(--t3);margin-top:12px;line-height:1.5">Paiement sécurisé · Accès immédiat · Données locales</p>
+  </div>
+</div>
+
+<!-- offline-badge -->
+<div class="offline-badge" id="offline-badge">📡 Hors ligne</div>
+
+<!-- lecons-list container (pour LEC.render() appelé après markDone) -->
+<div id="lecons-list" style="display:none"></div>
+
+
+
+<script src="js/app.js"></script>
+</body>
+</html>
