@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<!-- SEO + PWA -->
+<meta name="description" content="OPJ Elite — La référence de préparation à l'examen Officier de Police Judiciaire. QCM, leçons, PV interactifs, spaced repetition.">
+<meta name="theme-color" content="#03050c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>OPJ Elite v53</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- ─── SCRIPTS : ordre impératif ───
+     1. fsrs.js      → définit window.FSRS avec getDue()
+     2. app.js       → logique principale (redéclare localement FSRS mais window.FSRS reste intact)
+     3. app_patch.js → correctifs + module PV + gamification
+     ─────────────────────────────────── -->
+
+<style>
+/* ════════════════════════════════════════════════════════
+   TOKENS GLOBAUX v53
+   NOTE : tokens.css est vide — toutes les variables sont ici
+   ════════════════════════════════════════════════════════ */
+:root{
+  /* Couleurs dark (défaut) */
+  --bg-0:#03050c;--bg-1:#070b15;--bg-2:#0c1220;--bg-3:#111827;--bg-4:#1c2539;
+  --accent:#1b6bff;--accent-l:#4d8fff;--accent-xl:#82b4ff;
+  --accent-glow:rgba(27,107,255,.18);--accent-glow-l:rgba(27,107,255,.09);
+  --gold:#c8921a;--gold-l:#e6af44;--gold-glow:rgba(200,146,26,.15);
+  --ok:#00c97a;--ok-bg:rgba(0,201,122,.1);
+  --warn:#ff8c42;--warn-bg:rgba(255,140,66,.1);
+  --err:#ff3d57;--err-bg:rgba(255,61,87,.1);
+  --cyan:#00d4e8;--violet:#7c3aed;
+  --t1:#e8eeff;--t2:#6b7fa3;--t3:#3a4a6b;
+  --brd:rgba(255,255,255,.06);--brd-l:rgba(255,255,255,.11);
+  --brd-acc:rgba(27,107,255,.35);--brd-gold:rgba(200,146,26,.30);
+  --r-s:8px;--r-m:12px;--r-l:16px;--r-xl:20px;--r-2xl:26px;--r-3xl:34px;
+  --tr:.16s cubic-bezier(.4,0,.2,1);
+  --tr-spring:.38s cubic-bezier(.34,1.56,.64,1);
+  --spring:.38s cubic-bezier(.34,1.56,.64,1);
+  /* Dimensions layout */
+  --hdr-h:52px;
+  --nav-h:60px;
+  --safe-t:env(safe-area-inset-top);
+  --safe-b:env(safe-area-inset-bottom);
+  --page-px:16px;
+}
+
+/* ── Light mode — tokens COMPLETS (manquaient avant v53) ── */
+[data-theme="light"]{
+  --bg-0:#f0f2f8;--bg-1:#ffffff;--bg-2:#e8ecf4;--bg-3:#dde2ee;--bg-4:#c8d0e4;
+  --accent:#1b6bff;--accent-l:#2563eb;--accent-xl:#1d4ed8;
+  --accent-glow:rgba(27,107,255,.12);--accent-glow-l:rgba(27,107,255,.06);
+  --gold:#b07d10;--gold-l:#c8921a;--gold-glow:rgba(176,125,16,.15);
+  --ok:#059669;--ok-bg:rgba(5,150,105,.1);
+  --warn:#d97706;--warn-bg:rgba(217,119,6,.1);
+  --err:#dc2626;--err-bg:rgba(220,38,38,.1);
+  --t1:#0f172a;--t2:#475569;--t3:#94a3b8;
+  --brd:rgba(0,0,0,.08);--brd-l:rgba(0,0,0,.14);
+  --brd-acc:rgba(27,107,255,.25);--brd-gold:rgba(176,125,16,.25);
+}
+[data-theme="light"] body{background:#f0f2f8;color:#0f172a}
+[data-theme="light"] .phone{background:#f0f2f8}
+[data-theme="light"] .app-hdr{background:rgba(240,242,248,.95)}
+[data-theme="light"] .bnav{background:rgba(240,242,248,.97)}
+
+/* ════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#03050c;color:#e8eeff}
+body{font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input{font-family:inherit}
+
+/* Scrollbar cachée */
+::-webkit-scrollbar{display:none}
+*{scrollbar-width:none}
+
+/* Focus visible a11y */
+:focus-visible{outline:2px solid var(--accent-l);outline-offset:2px;border-radius:4px}
+
+/* ANIMATIONS */
+@keyframes pgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes flame{0%,100%{transform:scale(1) rotate(-3deg);filter:drop-shadow(0 0 3px #ff8c42)}50%{transform:scale(1.18) rotate(3deg);filter:drop-shadow(0 0 9px #ff3d57)}}
+@keyframes slidein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes popIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+.flame{display:inline-block;animation:flame 1.8s ease infinite}
+
+/* PREFERS REDUCED MOTION */
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* LAYOUT */
+.phone{max-width:390px;margin:0 auto;background:var(--bg-0);min-height:100dvh;display:flex;flex-direction:column;padding-top:var(--safe-t)}
+.screen{display:none;flex:1;flex-direction:column}
+.screen.active{display:flex;animation:pgIn .22s ease both}
+.scroll-area{flex:1;overflow-y:auto;padding:14px 16px 24px}
+
+/* HEADER */
+.app-hdr{flex-shrink:0;height:var(--hdr-h);padding:0 16px;background:rgba(3,5,12,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:10px;position:relative}
+.app-hdr::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent) 30%,var(--accent-l) 55%,var(--gold) 80%,transparent);opacity:.42}
+.hdr-logo{font-family:'Syne',system-ui,sans-serif;font-size:16px;font-weight:800;color:var(--t1);letter-spacing:-.025em;flex:1}
+.hdr-logo b{font-style:normal;color:var(--accent-l)}
+/* FIX ACCESSIBILITÉ : pill de 8px → 10px */
+.hdr-pill{display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;background:rgba(27,107,255,.08);border:1px solid var(--brd-acc);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--accent-xl);letter-spacing:.07em;text-transform:uppercase}
+.hdr-pill::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent-l);box-shadow:0 0 5px var(--accent-l);animation:blink 2.4s ease infinite}
+.hdr-xp{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--gold-l);flex-shrink:0}
+
+/* BOTTOM NAV — FIX ACCESSIBILITÉ : 7.5px → 11px */
+.bnav{flex-shrink:0;height:calc(var(--nav-h) + var(--safe-b));padding-bottom:var(--safe-b);background:rgba(3,5,12,.95);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--brd);display:flex;align-items:flex-start;padding-top:5px}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 4px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);transition:color var(--tr);position:relative;cursor:pointer;background:none;border:none}
+.nb svg{transition:transform var(--tr),filter var(--tr)}
+.nb.on{color:var(--accent-l)}
+.nb.on svg{filter:drop-shadow(0 0 7px rgba(77,143,255,.65));transform:translateY(-1px) scale(1.05)}
+.nb.on::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:26px;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent-l));border-radius:2px;box-shadow:0 0 6px var(--accent)}
+.nb-pip{position:absolute;top:4px;right:calc(50% - 14px);width:7px;height:7px;border-radius:50%;background:var(--err);border:2px solid var(--bg-0);box-shadow:0 0 5px var(--err)}
+
+/* SECTION LABEL — FIX 9px → 11px */
+.slbl{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.13em;display:flex;align-items:center;gap:7px;margin:18px 0 9px}
+.slbl::before{content:'';width:12px;height:1.5px;flex-shrink:0;background:linear-gradient(90deg,var(--accent-l),transparent);border-radius:1px}
+
+/* SEARCH */
+.search{position:relative;margin-bottom:13px}
+.search input{width:100%;background:var(--bg-1);border:1.5px solid var(--brd-l);border-radius:22px;padding:11px 16px 11px 42px;font-size:15px;color:var(--t1);outline:none}
+.search input::placeholder{color:var(--t3)}
+.search-ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:15px;pointer-events:none}
+
+/* HERO */
+.hero{position:relative;overflow:hidden;background:var(--bg-1);border:1px solid var(--brd-l);border-radius:var(--r-2xl);padding:18px 18px 16px;margin-bottom:12px;box-shadow:0 2px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35)}
+.hero::before{content:'';position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(27,107,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(27,107,255,.04) 1px,transparent 1px);background-size:30px 30px;-webkit-mask-image:radial-gradient(ellipse 100% 100% at 100% 0%,black 20%,transparent 68%);mask-image:radial-gradient(ellipse 100% 100% at 100% 0%,black 20%,transparent 68%)}
+.hero::after{content:'';position:absolute;top:-50px;right:-30px;width:200px;height:200px;pointer-events:none;background:radial-gradient(circle,rgba(27,107,255,.12) 0%,transparent 65%)}
+.hero-line{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent-l) 50%,transparent);border-radius:var(--r-2xl) var(--r-2xl) 0 0;opacity:.65}
+.hero-top{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.hero-greet{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--accent-xl);letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px}
+.hero-name{font-family:'Syne',system-ui,sans-serif;font-size:22px;font-weight:800;color:var(--t1);letter-spacing:-.03em;line-height:1.15}
+.hero-name span{color:var(--accent-l)}
+.hero-av{width:42px;height:42px;border-radius:13px;flex-shrink:0;background:linear-gradient(135deg,var(--bg-3),var(--bg-4));border:1.5px solid var(--brd-gold);display:flex;align-items:center;justify-content:center;font-size:21px;box-shadow:0 2px 12px rgba(200,146,26,.18)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;position:relative;z-index:1}
+.kpi{background:rgba(0,0,0,.3);border:1px solid var(--brd);border-radius:var(--r-m);padding:9px 5px;text-align:center}
+.kpi-v{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:var(--t1);line-height:1}
+/* FIX ACCESSIBILITÉ : 7.5px → 11px */
+.kpi-l{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);margin-top:3px;text-transform:uppercase;letter-spacing:.07em}
+.kpi.xp .kpi-v{color:var(--accent-xl)}.kpi.str .kpi-v{color:var(--warn)}.kpi.due .kpi-v{color:var(--gold-l)}
+.xpbar{height:3.5px;background:rgba(255,255,255,.06);border-radius:100px;overflow:hidden;margin-bottom:13px;position:relative;z-index:1}
+.xpbar-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--accent),var(--accent-l),var(--cyan));box-shadow:0 0 9px rgba(77,143,255,.5)}
+.hero-btns{display:grid;grid-template-columns:1fr 1fr;gap:7px;position:relative;z-index:1}
+.btn-main{padding:12px;border-radius:var(--r-l);background:linear-gradient(135deg,var(--accent),var(--accent-l));color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 3px 0 rgba(13,50,180,.7);position:relative;overflow:hidden;transition:transform .12s,box-shadow .12s}
+.btn-main::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.12),transparent 55%);pointer-events:none}
+.btn-main:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(13,50,180,.7)}
+.btn-sec{padding:12px;border-radius:var(--r-l);border:1px solid var(--brd-l);background:rgba(255,255,255,.04);color:var(--t1);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 3px 0 rgba(0,0,0,.35);transition:transform .12s,box-shadow .12s}
+.btn-sec:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+
+/* QDJ */
+.qdj{position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(200,146,26,.11),rgba(200,146,26,.04) 70%);border:1px solid var(--brd-gold);border-radius:var(--r-2xl);padding:15px 16px;margin-bottom:12px;cursor:pointer}
+.qdj::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),var(--gold-l) 55%,transparent);opacity:.65}
+.qdj::after{content:'';position:absolute;bottom:-30px;right:-15px;width:120px;height:120px;pointer-events:none;background:radial-gradient(circle,rgba(200,146,26,.11) 0%,transparent 65%)}
+.qdj-head{display:flex;align-items:center;margin-bottom:9px}
+.qdj-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(200,146,26,.12);border:1px solid rgba(200,146,26,.22);color:var(--gold);font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;padding:3px 9px;border-radius:4px;text-transform:uppercase;letter-spacing:.09em}
+.qdj-timer{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t3);display:flex;align-items:center;gap:4px}
+.qdj-q{font-family:'Syne',system-ui,sans-serif;font-size:14px;font-weight:700;color:var(--t1);line-height:1.48;margin-bottom:10px;position:relative;z-index:1}
+.qdj-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px;position:relative;z-index:1}
+.qdj-opt{padding:9px 12px;border-radius:var(--r-m);border:1px solid var(--brd);background:rgba(0,0,0,.25);font-size:12px;font-weight:600;color:var(--t2);text-align:left;transition:all var(--tr)}
+.qdj-opt:hover{border-color:var(--gold);color:var(--t1);background:rgba(200,146,26,.08)}
+.qdj-opt:active{transform:scale(.97)}
+.qdj-opt.ok{border-color:var(--ok);background:var(--ok-bg);color:var(--ok);pointer-events:none}
+.qdj-opt.ko{border-color:var(--err);background:var(--err-bg);color:var(--err);pointer-events:none}
+.qdj-opt.dim{opacity:.4;pointer-events:none}
+.qdj-expl{margin-top:10px;padding:11px 13px;border-radius:var(--r-m);background:rgba(0,201,122,.07);border:1px solid rgba(0,201,122,.18);font-size:12px;color:var(--t2);line-height:1.6;position:relative;z-index:1;animation:slidein .22s ease both}
+
+/* MISSIONS */
+.missions{background:var(--bg-1);border:1px solid var(--brd-l);border-radius:var(--r-2xl);padding:14px 15px;margin-bottom:12px}
+.missions-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.missions-lbl{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;display:flex;align-items:center;gap:6px}
+.missions-lbl::before{content:'';width:12px;height:1.5px;background:linear-gradient(90deg,var(--accent),transparent)}
+.missions-xp{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--gold-l)}
+.mrow{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:var(--r-l);background:var(--bg-2);border:1px solid var(--brd);margin-bottom:6px;transition:all var(--tr)}
+.mrow:last-child{margin-bottom:0}
+.mrow.done{background:rgba(0,201,122,.06);border-color:rgba(0,201,122,.22)}
+.m-ico{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--bg-3)}
+.mrow.done .m-ico{background:rgba(0,201,122,.12)}
+.m-body{flex:1;min-width:0}
+.m-name{font-size:12px;font-weight:600;color:var(--t1)}
+.mrow.done .m-name{color:var(--ok);text-decoration:line-through}
+.m-progress{display:flex;align-items:center;gap:7px;margin-top:4px}
+.m-track{flex:1;height:2.5px;background:rgba(255,255,255,.06);border-radius:100px;overflow:hidden}
+.m-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--accent),var(--accent-l));transition:width .5s ease}
+.mrow.done .m-fill{background:var(--ok)}
+.m-cnt{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t3)}
+.m-xp{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--gold);background:rgba(200,146,26,.1);border:1px solid rgba(200,146,26,.18);border-radius:5px;padding:2px 7px;flex-shrink:0}
+.mrow.done .m-xp{color:var(--ok);background:var(--ok-bg);border-color:rgba(0,201,122,.22)}
+
+/* PLAN D ETUDE */
+.splan{background:var(--bg-1);border:1px solid var(--brd-acc);border-radius:var(--r-2xl);padding:14px 15px;margin-bottom:12px;position:relative;overflow:hidden}
+.splan::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(27,107,255,.05),transparent 55%);pointer-events:none}
+.splan-lbl{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px;position:relative;z-index:1}
+.phase{display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(27,107,255,.09),rgba(200,146,26,.07));border:1px solid rgba(200,146,26,.18);border-radius:var(--r-l);padding:10px 13px;margin-bottom:10px;position:relative;z-index:1}
+.phase-em{font-size:20px;flex-shrink:0}
+.phase-inf{flex:1}
+.phase-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em}
+.phase-txt{font-size:12px;font-weight:600;color:var(--t1);margin-top:1px}
+.phase-badge{text-align:center;flex-shrink:0;padding:6px 10px;background:rgba(200,146,26,.08);border:1px solid rgba(200,146,26,.18);border-radius:var(--r-m)}
+.phase-n{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--gold-l);line-height:1}
+.phase-unit{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em}
+
+/* iOS — Prevent input zoom */
+input,select,textarea{font-size:16px!important;box-sizing:border-box!important;max-width:100%!important}
+
+/* Offline bar */
+#offline-bar{display:none;background:var(--warn);color:#1a0800;font-size:12px;font-weight:700;text-align:center;padding:6px;position:sticky;top:0;z-index:999}
+</style>
+</head>
+
+<body>
+
+<!-- ═══ ÉCRAN AUTH / ONBOARDING ═══ -->
+<!-- (inchangé — géré par app.js) -->
+<div id="onboarding" style="display:none;position:fixed;inset:0;z-index:800;background:var(--bg-0);flex-direction:column;align-items:center;justify-content:center;padding:24px">
+  <!-- app.js gère le contenu de cet écran -->
+</div>
+
+<!-- ═══ APPLICATION PRINCIPALE ═══ -->
+<div id="app" style="display:none">
+
+<!-- Barre offline -->
+<div id="offline-bar" role="status" aria-live="polite">📴 Mode hors-ligne — Données locales</div>
+
+<!-- Canvas confettis -->
+<canvas id="confetti-cv" style="position:fixed;inset:0;pointer-events:none;z-index:1000;display:none" aria-hidden="true"></canvas>
+
+<!-- Toast container -->
+<div id="toast-ctr" style="position:fixed;bottom:calc(var(--nav-h) + var(--safe-b) + 16px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:700;pointer-events:none" role="region" aria-label="Notifications"></div>
+
+<!-- FAB scroll-to-top -->
+<button class="fab" id="fab" aria-label="Retour en haut" style="display:none">↑</button>
+<style>
+.fab{position:fixed;right:16px;bottom:calc(var(--nav-h) + var(--safe-b) + 12px);width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-l));border:none;cursor:pointer;z-index:90;display:none;align-items:center;justify-content:center;font-size:18px;color:#fff;box-shadow:0 4px 20px rgba(37,99,235,.45);transition:all .2s var(--spring)}
+.fab.vis{display:flex}
+.fab:active{transform:scale(.9)}
+</style>
+
+<!-- ══════════════════════════════════════
+     PAGES — rendues dynamiquement par app.js
+     ══════════════════════════════════════ -->
+<!-- app.js crée les pages home, lecons, revision, profil etc.
+     dans le DOM via navigateTo() et renderXxx() -->
+<div id="p-home"     class="page" style="display:none"></div>
+<div id="p-lecons"   class="page" style="display:none"></div>
+<div id="p-revision" class="page" style="display:none"></div>
+<div id="p-examen"   class="page" style="display:none"></div>
+<div id="p-profil"   class="page" style="display:none"></div>
+
+</div><!-- #app -->
+
+<!-- ══════════════════════════════════════
+     OVERLAYS GLOBAUX (injectés par app.js)
+     ══════════════════════════════════════ -->
+
+<!-- Badge unlock overlay -->
+<div id="badge-unlock-ov" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.8);backdrop-filter:blur(16px);align-items:center;justify-content:center" onclick="BADGES?.closeModal()" role="dialog" aria-modal="true" aria-label="Badge débloqué">
+  <div style="text-align:center;padding:32px;max-width:300px">
+    <div id="bul-emoji"  style="font-size:80px;margin-bottom:12px;animation:popIn .5s var(--spring)"></div>
+    <div id="bul-name"   style="font-family:'Syne',sans-serif;font-size:24px;font-weight:900;color:var(--t1);margin-bottom:6px"></div>
+    <div id="bul-desc"   style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:20px"></div>
+    <button class="btn btn-gold btn-full" onclick="BADGES?.closeModal()" style="background:linear-gradient(135deg,var(--gold),var(--gold-l));color:#1a1200;font-weight:800;padding:14px;border-radius:14px;width:100%">Super ! 🎉</button>
+  </div>
+</div>
+
+<!-- Streak danger overlay -->
+<div id="streak-danger-ov" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(239,68,68,.12);backdrop-filter:blur(8px);align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:24px" role="alertdialog" aria-modal="true">
+  <div style="text-align:center;max-width:320px">
+    <div style="font-size:64px;margin-bottom:12px">🔥</div>
+    <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:900;color:var(--t1);margin-bottom:8px">Ton streak est en danger !</div>
+    <div style="font-size:13px;color:var(--t2);margin-bottom:20px">Tu n'as pas joué hier. Utilise un bouclier pour le sauvegarder.</div>
+    <div id="streak-shield-info" style="margin-bottom:16px"></div>
+    <button id="use-shield-btn" class="btn" onclick="SHIELD?.useShield()" style="width:100%;background:linear-gradient(135deg,var(--gold),var(--gold-l));color:#1a1200;font-weight:800;padding:14px;border-radius:14px;margin-bottom:8px;display:none">🛡️ Utiliser un bouclier</button>
+    <button class="btn" onclick="SHIELD?.dismiss()" style="width:100%;background:var(--bg-2);color:var(--t2);border:1px solid var(--brd-l);padding:12px;border-radius:14px">Continuer sans bouclier</button>
+  </div>
+</div>
+
+<!-- Lesson overlay -->
+<div id="lesson-ov" class="lesson-ov" role="dialog" aria-modal="true" aria-label="Leçon" onclick="if(event.target===this)closeLesson()">
+  <div class="lesson-sheet" style="background:var(--bg-1);border-radius:24px 24px 0 0;width:100%;max-width:600px;margin:0 auto;max-height:93dvh;overflow-y:auto;box-shadow:0 -12px 60px rgba(0,0,0,.7);border-top:1px solid rgba(255,255,255,.08)">
+    <div style="width:40px;height:5px;background:rgba(255,255,255,.15);border-radius:3px;margin:14px auto 0;cursor:pointer" onclick="closeLesson()"></div>
+    <div id="lesson-modal-body" style="padding:16px 18px 32px"></div>
+  </div>
+</div>
+
+<!-- Fiche infraction overlay -->
+<div id="fiche-ov" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end" role="dialog" aria-modal="true" aria-label="Fiche infraction" onclick="if(event.target===this)closeFiche()">
+  <div style="width:100%;max-width:600px;margin:0 auto;background:var(--bg-1);border-radius:24px 24px 0 0;border-top:1px solid var(--brd-l);max-height:90dvh;overflow-y:auto;animation:sheetUp .3s ease">
+    <div style="width:40px;height:5px;background:rgba(255,255,255,.12);border-radius:3px;margin:14px auto 8px;cursor:pointer" onclick="closeFiche()"></div>
+    <div id="fiche-body" style="padding:0 0 32px"></div>
+  </div>
+</div>
+
+<!-- Annale overlay -->
+<div id="ann-ov" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);overflow-y:auto;padding:20px 16px" role="dialog" aria-modal="true" aria-label="Annale" onclick="if(event.target===this)closeAnnale()">
+  <div style="max-width:600px;margin:0 auto;background:var(--bg-1);border-radius:20px;padding:20px;border:1px solid var(--brd-l)">
+    <div id="ann-body"></div>
+    <button class="btn" onclick="closeAnnale()" style="width:100%;margin-top:16px;background:var(--bg-3);color:var(--t2);border:1px solid var(--brd-l);padding:12px;border-radius:12px">Fermer</button>
+  </div>
+</div>
+
+<!-- PRO modal -->
+<div id="pro-modal-ov" style="position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.82);backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)P.hidePro()" role="dialog" aria-modal="true">
+  <div id="pro-modal-body" style="width:100%;max-width:380px;max-height:90dvh;overflow-y:auto;background:var(--bg-1);border-radius:24px;padding:24px;border:1px solid rgba(212,175,55,.3)"></div>
+</div>
+<style>.pro-modal-ov.a{display:flex!important}</style>
+
+<!-- Pay modal -->
+<div id="pay-modal-ov" style="position:fixed;inset:0;z-index:410;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);display:none;align-items:flex-end;justify-content:center" onclick="if(event.target===this)P.hidePay()" role="dialog" aria-modal="true">
+  <div id="pay-modal-body" style="width:100%;max-width:500px;background:var(--bg-1);border-radius:24px 24px 0 0;padding:24px;border-top:1px solid var(--brd-l);max-height:90dvh;overflow-y:auto"></div>
+</div>
+<style>.pay-modal-ov.a{display:flex!important}</style>
+
+<!-- Blitz overlay -->
+<div id="blitz-ov" style="position:fixed;inset:0;background:var(--bg-0);z-index:250;display:none;flex-direction:column" role="dialog" aria-modal="true" aria-label="Mode Blitz">
+  <div style="flex-shrink:0;padding:12px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--brd)">
+    <button onclick="BLITZ?.stop()" aria-label="Fermer le Blitz" style="background:var(--bg-3);border:none;border-radius:10px;width:36px;height:36px;font-size:16px;cursor:pointer;color:var(--t2)">←</button>
+    <div style="flex:1;height:5px;background:var(--bg-3);border-radius:100px;overflow:hidden">
+      <div id="blitz-timer-fill" style="height:100%;background:linear-gradient(90deg,var(--ok),var(--warn),var(--err));border-radius:100px;transition:width .5s linear"></div>
+    </div>
+    <span id="blitz-timer-display" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--warn);min-width:28px;text-align:center">60</span>
+    <span id="blitz-counter" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--t3)">1/10</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
+    <div id="blitz-question" class="blitz-q" style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--t1);line-height:1.4;margin-bottom:32px;max-width:440px"></div>
+    <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:380px">
+      <button id="blitz-vrai" class="blitz-btn blitz-btn-ok" onclick="BLITZ?.answer(true)">✓ VRAI</button>
+      <button id="blitz-faux" class="blitz-btn blitz-btn-ko" onclick="BLITZ?.answer(false)">✗ FAUX</button>
+    </div>
+  </div>
+</div>
+<style>
+.blitz-ov.show{display:flex!important}
+.blitz-btn{padding:18px;border-radius:18px;border:2px solid transparent;font-size:16px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:all .15s var(--spring)}
+.blitz-btn-ko{background:var(--err-bg);border-color:rgba(239,68,68,.25);color:var(--err)}
+.blitz-btn-ok{background:var(--ok-bg);border-color:rgba(16,185,129,.25);color:var(--ok)}
+.blitz-btn-ko:active,.blitz-btn-ko.sel{background:var(--err);border-color:var(--err);color:#fff;transform:scale(.96)}
+.blitz-btn-ok:active,.blitz-btn-ok.sel{background:var(--ok);border-color:var(--ok);color:#fff;transform:scale(.96)}
+.blitz-btn:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,.3)}
+</style>
+
+<!-- Blitz results -->
+<div id="blitz-results-ov" style="display:none;position:fixed;inset:0;z-index:260;background:rgba(0,0,0,.85);backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:20px" role="dialog" aria-modal="true">
+  <div style="width:100%;max-width:380px;background:var(--bg-1);border-radius:24px;padding:24px;border:1px solid var(--brd-l);max-height:90dvh;overflow-y:auto">
+    <div style="text-align:center;margin-bottom:16px">
+      <div id="blitz-res-emoji" style="font-size:56px;margin-bottom:8px"></div>
+      <div id="blitz-res-score" style="font-family:'JetBrains Mono',monospace;font-size:38px;font-weight:700;color:var(--t1)"></div>
+      <div id="blitz-res-xp"    style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--gold);font-weight:700;margin-top:4px"></div>
+    </div>
+    <div id="blitz-review" style="margin-bottom:16px"></div>
+    <button onclick="BLITZ?.backToMenu()" style="width:100%;background:linear-gradient(135deg,var(--accent),var(--accent-l));color:#fff;font-weight:800;padding:14px;border-radius:14px;border:none;cursor:pointer;font-size:15px">Retour au menu</button>
+  </div>
+</div>
+
+<!-- Classify overlay -->
+<div id="classify-ov" style="position:fixed;inset:0;background:var(--bg-0);z-index:260;display:none;flex-direction:column" role="dialog" aria-modal="true" aria-label="Classifie les infractions">
+  <style>.classify-ov.show{display:flex!important}</style>
+  <div style="padding:14px 16px;border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:12px;flex-shrink:0">
+    <button onclick="document.getElementById('classify-ov').classList.remove('show')" aria-label="Fermer" style="background:var(--bg-3);border:none;border-radius:10px;width:36px;height:36px;font-size:16px;cursor:pointer;color:var(--t2)">←</button>
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:900;color:var(--t1)">Classifie les infractions</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:14px 16px">
+    <div id="classif-items" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;min-height:60px;padding:10px;background:var(--bg-2);border-radius:14px;border:1px solid var(--brd)"></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+      <div id="col-Crime"         style="background:rgba(239,68,68,.08);border:2px dashed rgba(239,68,68,.3);border-radius:12px;padding:10px;min-height:80px" ondragover="CLASSIF.dragOver(event,'Crime')" ondragleave="CLASSIF.dragLeave(event)" ondrop="CLASSIF.drop(event,'Crime')" onclick="CLASSIF.drop({preventDefault:()=>{}},Crime)">
+        <div style="font-size:10px;font-weight:800;color:#ef4444;text-align:center;margin-bottom:6px">CRIME</div>
+      </div>
+      <div id="col-Dlit"          style="background:rgba(37,99,235,.08);border:2px dashed rgba(37,99,235,.3);border-radius:12px;padding:10px;min-height:80px" ondragover="CLASSIF.dragOver(event,'Dlit')" ondragleave="CLASSIF.dragLeave(event)" ondrop="CLASSIF.drop(event,'Dlit')">
+        <div style="font-size:10px;font-weight:800;color:#4d8fff;text-align:center;margin-bottom:6px">DÉLIT</div>
+      </div>
+      <div id="col-Contravention"  style="background:rgba(245,158,11,.08);border:2px dashed rgba(245,158,11,.3);border-radius:12px;padding:10px;min-height:80px" ondragover="CLASSIF.dragOver(event,'Contravention')" ondragleave="CLASSIF.dragLeave(event)" ondrop="CLASSIF.drop(event,'Contravention')">
+        <div style="font-size:10px;font-weight:800;color:#f59e0b;text-align:center;margin-bottom:6px">CONTRAV.</div>
+      </div>
+    </div>
+    <button id="classif-validate-btn" onclick="CLASSIF?.validate()" style="display:none;width:100%;background:linear-gradient(135deg,var(--accent),var(--accent-l));color:#fff;font-weight:800;padding:14px;border-radius:14px;border:none;cursor:pointer;font-size:15px;margin-bottom:10px">Valider ma classification →</button>
+    <div id="classif-result" style="display:none"></div>
+  </div>
+</div>
+<style>
+.classify-item{padding:8px 12px;background:var(--bg-2);border:1px solid var(--brd-l);border-radius:10px;font-size:12px;font-weight:700;color:var(--t1);cursor:grab;user-select:none;transition:all .15s;white-space:nowrap}
+.classify-item.correct{background:var(--ok-bg);border-color:rgba(0,201,122,.3);color:var(--ok)}
+.classify-item.wrong{background:var(--err-bg);border-color:rgba(239,68,68,.3);color:var(--err)}
+.drag-over{border-color:var(--accent)!important;background:rgba(27,107,255,.1)!important}
+</style>
+
+<!-- Qualif overlay -->
+<div id="qualif-ov" style="position:fixed;inset:0;background:var(--bg-0);z-index:260;display:none;flex-direction:column" role="dialog" aria-modal="true" aria-label="Qualification des faits">
+  <style>.qualif-ov.show{display:flex!important}</style>
+  <div style="padding:14px 16px;border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:12px;flex-shrink:0">
+    <button onclick="QUALIF?.stop()" aria-label="Fermer" style="background:var(--bg-3);border:none;border-radius:10px;width:36px;height:36px;font-size:16px;cursor:pointer;color:var(--t2)">←</button>
+    <div style="flex:1">
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:900;color:var(--t1)">Qualifie les faits</div>
+      <div id="qualif-counter" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t3)"></div>
+    </div>
+  </div>
+  <div id="qualif-body" style="flex:1;overflow-y:auto;padding:16px"></div>
+</div>
+
+<!-- CR Timer overlay -->
+<div id="cr-timer-ov" style="display:none;position:fixed;inset:0;z-index:280;background:rgba(0,0,0,.9);backdrop-filter:blur(16px);align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center" role="dialog" aria-modal="true">
+  <div id="cr-phase-lbl" style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent-xl);text-transform:uppercase;letter-spacing:.1em"></div>
+  <div id="cr-timer-disp" style="font-family:'JetBrains Mono',monospace;font-size:72px;font-weight:700;color:var(--t1);letter-spacing:-.03em;line-height:1"></div>
+  <div id="cr-phase-sub"  style="font-size:13px;color:var(--t2)"></div>
+  <button id="cr-skip-btn" onclick="skipCRPhase()" style="display:none;background:rgba(27,107,255,.15);border:1px solid var(--brd-acc);color:var(--accent-l);padding:12px 24px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer">Passer à l'oral →</button>
+  <button onclick="stopCRTimer()" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:var(--err);padding:12px 24px;border-radius:14px;font-size:14px;cursor:pointer">⬛ Terminer</button>
+</div>
+
+<!-- Proc fiche overlay -->
+<div id="pf-ov" class="pf-ov" role="dialog" aria-modal="true" aria-label="Fiche procédure" onclick="if(event.target===this)PFM?.close()">
+  <div id="pf-sheet" class="pf-sheet" style="padding:20px 18px 40px">
+    <div id="pf-body"></div>
+  </div>
+</div>
+
+<!-- Onboarding v2 (injecté dynamiquement par app.js) -->
+
+<!-- ════════════════════════════════════════════════
+     STYLES COMPLÉMENTAIRES (reste inchangé depuis app.js)
+     ════════════════════════════════════════════════ -->
+<style>
+/* Overrides accessibilité globaux v53 */
+.bubble-name{font-size:10px!important}
+.ft-nm,.ft-qual{font-size:11px!important}
+.proc-card-ref{font-size:11px!important}
+.kpi-l{font-size:11px!important}
+.nb span{font-size:11px!important}
+
+/* Lesson overlay */
+.lesson-ov{position:fixed;inset:0;display:none;align-items:flex-end;z-index:200;background:rgba(0,0,0,.72);backdrop-filter:blur(12px)}
+.lesson-ov.on{display:flex;animation:pgIn .2s ease}
+
+/* Pf overlay */
+.pf-ov{position:fixed;inset:0;display:none;align-items:flex-end;z-index:200;background:rgba(0,0,0,.7);backdrop-filter:blur(10px)}
+.pf-sheet{background:var(--bg-1);border-radius:24px 24px 0 0;border-top:1px solid var(--brd-l);width:100%;max-width:600px;margin:0 auto;max-height:88dvh;overflow-y:auto;animation:sheetUp .3s cubic-bezier(.25,.46,.45,.94);box-shadow:0 -8px 48px rgba(0,0,0,.6)}
+
+/* Page styles */
+.page{max-width:560px;margin:0 auto;padding:14px var(--page-px) 40px;animation:pgIn .22s ease both}
+
+/* Scroll */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg-4);border-radius:2px}
+</style>
+
+<!-- ════════════════════════════════════════════════
+     CHARGEMENT DES SCRIPTS
+     ORDRE IMPÉRATIF :
+     1. fsrs.js   → window.FSRS avec getDue()
+     2. app.js    → logique principale
+     3. app_patch.js → correctifs + module PV
+     ════════════════════════════════════════════════ -->
+<script src="fsrs.js"></script>
+<script src="app.js"></script>
+<script src="app_patch.js"></script>
+
+<!-- Service Worker -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+</script>
+
+</body>
+</html>
